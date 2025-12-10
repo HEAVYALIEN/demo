@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Breaker's Choice - Deal Breaker Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.cdnfonts.com/css/ica-rubrik-black" rel="stylesheet">
+  <link href="https://fonts.cdnfonts.com/css/poppins" rel="stylesheet">
+  <style>
+    @import url('https://fonts.cdnfonts.com/css/ica-rubrik-black');
+    @import url('https://fonts.cdnfonts.com/css/poppins');
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      font-family: 'Poppins', system-ui, sans-serif;
+      color: #e5e7eb;
+      /* gradient background instead of grid */
+      background: #1a1a1a;
+      /*  radial-gradient(circle at 10% 0%, #22c1c3 0,rgba(34,193,195,0) 40%),
+        radial-gradient(circle at 90% 0%, #ff8a00 0, rgba(255,138,0,0) 45%),
+        radial-gradient(circle at 50% 100%, #1e3a8a 0, #020617 55%); */
+    }
+
+    .banner {
+      width: 100%;
+      height: 100vh;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* 3D CAROUSEL */
+
+    .banner .slider {
+      position: absolute;
+      width: 250px;
+      /* 2.5" proxy */
+      height: 350px;
+      /* 3.5" proxy */
+      top: 10%;
+      left: calc(50% - 125px);
+      /* center horizontally */
+
+      transform-style: preserve-3d;
+      transform: perspective(1000px) rotateX(-16deg) rotateY(var(--rotateY, 0deg));
+      transition: transform 0.8s cubic-bezier(0.22, 0.61, 0.36, 1);
+      z-index: 2;
+      --rotateY: 0deg;
+      /* JS will update this */
+      --quantity: 10;
+      /* total packs, keep in sync with HTML items */
+    }
+
+    .banner .slider .item {
+      position: absolute;
+      inset: 0;
+      transform:
+        rotateY(calc((var(--position) - 1) * (360 / var(--quantity)) * 1deg)) translateZ(420px);
+      transform-style: preserve-3d;
+    }
+
+    .banner .slider .item img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      transform-origin: center;
+      transition: transform 0.25s ease-out, filter 0.25s ease-out;
+      filter: drop-shadow(0 18px 40px rgba(0, 0, 0, 0.7));
+    }
+
+    .banner .slider .item.active img {
+      transform: scale(1.05) translateZ(20px);
+    }
+
+    .banner .slider .item.opening img {
+      animation: packOpen 0.6s ease-out forwards;
+    }
+
+    @keyframes packOpen {
+      0% {
+        transform: scale(1.05) translateZ(20px) rotateY(0deg);
+        opacity: 1;
+      }
+
+      40% {
+        transform: scale(1.2) translateZ(40px) rotateY(15deg);
+        opacity: 1;
+      }
+
+      100% {
+        transform: scale(0.2) translateZ(100px) rotateY(90deg);
+        opacity: 0;
+      }
+    }
+
+    .card-result {
+      position: absolute;
+      inset: 10px;
+      border-radius: 6px;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
+      transform: translateY(40px) translateZ(80px);
+      opacity: 0;
+      pointer-events: none;
+      image-rendering: -webkit-optimize-contrast;
+    }
+
+    .banner .slider .item.show-card .card-result {
+      animation: cardPop 0.6s ease-out forwards;
+      animation-delay: 0.1s;
+    }
+
+    @keyframes cardPop {
+      0% {
+        opacity: 0;
+        transform: scale(0.4) translateY(40px) translateZ(80px);
+      }
+
+      100% {
+        opacity: 1;
+        transform: scale(1) translateY(0) translateZ(80px);
+      }
+    }
+
+    /* BUTTONS */
+
+    .controls-bar {
+      position: absolute;
+      bottom: 6%;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 12px;
+      z-index: 3;
+    }
+
+    button.btn {
+      border-radius: 30px;
+      background: #E3C47D;
+      font-size: 1.2rem;
+      font-weight: 600;
+      padding: 9px 16px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #1a1a1a;
+      transition:
+        background 0.16s ease,
+        transform 0.08s ease,
+        box-shadow 0.16s ease,
+        border-color 0.16s ease;
+    }
+
+    button.btn.primary {
+      background: linear-gradient(0deg, #F48E33, #E3C47D, #F48E33);
+      border-color: #000000;
+      color: #1a1a1a;
+    }
+
+    button.btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+    }
+
+    button.btn:active {
+      transform: translateY(0);
+      box-shadow: none;
+    }
+
+    /* REWARD POPUP */
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+
+    .overlay.show {
+      display: flex;
+    }
+
+    .reward-modal {
+      background: rgba(44, 44, 44, 0.96);
+      border-radius: 18px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      max-width: 600px;
+      width: 90%;
+      color: #e5e7eb;
+    }
+
+    .reward-card-image {
+      width: 250px;
+      height: 350px;
+      border-radius: 15px;
+      background-size: contain;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-color: #1a1a1a;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.8);
+      flex-shrink: 0;
+    }
+
+    .reward-text {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .reward-text h2 {
+      font-size: 1.5rem;
+      margin: 0;
+    }
+
+    .reward-text p {
+      font-size: 1rem;
+      margin: 0;
+      color: #cbd5f5;
+    }
+
+    .reward-pack {
+      font-size: 1rem;
+      color: #9ca3af;
+    }
+
+    .reward-close {
+      margin-top: 6px;
+      align-self: flex-start;
+      font-size: 0.75rem;
+      padding: 10px 15px;
+      border-radius: 999px;
+      border: 1px solid rgba(0, 0, 0, 0.8);
+      background: #1a1a1a;
+      color: #ffffff;
+      cursor: pointer;
+    }
+
+    .reward-close:hover {
+      background: #F48E33;
+      border-color: rgb(0, 0, 0);
+      color: #1a1a1a;
+    }
+
+    @media screen and (max-width: 767px) {
+      .banner .slider {
+        top: 6%;
+      }
+
+      .controls-bar {
+        bottom: 4%;
+      }
+
+      .reward-modal {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .reward-card-image {
+        width: 250px;
+        height: 350px;
+      }
+    }
+
+    #rewardLabel {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: 0.5px;
+      margin-top: -4px;
+    }
+
+    #rewardBarcodeWrapper {
+      margin-top: 10px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 1);
+      border: 1px solid rgba(0, 0, 0, 0.7);
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    #rewardBarcode {
+      max-width: 100%;
+    }
+
+    .reward-barcode-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #1a1a1a;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="banner">
+    <!-- 3D PACK CAROUSEL -->
+    <div class="slider" id="slider" style="--quantity: 10;">
+      <div class="item" style="--position: 1" data-index="0">
+        <img src="Pack.png" alt="Pack 1">
+        <div class="card-result"></div>
+      </div>
+      <div class="item" style="--position: 2" data-index="1">
+        <img src="Pack.png" alt="Pack 2">
+        <div class="card-result"></div>
+      </div>
+      <div class="item" style="--position: 3" data-index="2">
+        <img src="Pack.png" alt="Pack 3">
+        <div class="card-result"></div>
+      </div>
+      <div class="item" style="--position: 4" data-index="3">
+        <img src="Pack.png" alt="Pack 4">
+        <div class="card-result"></div>
+      </div>
+      <div class="item" style="--position: 5" data-index="4">
+        <img src="Pack.png" alt="Pack 5">
+        <div class="card-result"></div>
+      </div>
+      <div class="item" style="--position: 6" data-index="5">
+        <img src="Pack.png" alt="Pack 6">
+        <div class="card-result"></div>
+      </div>
+      <div class="item" style="--position: 7" data-index="6">
+        <img src="Pack.png" alt="Pack 7">
+        <div class="card-result"></div>
+      </div>
+      <div class="item" style="--position: 8" data-index="7">
+        <img src="Pack.png" alt="Pack 8">
+        <div class="card-result"></div>
+      </div>
+      <div class="item" style="--position: 9" data-index="8">
+        <img src="Pack.png" alt="Pack 9">
+        <div class="card-result"></div>
+      </div>
+      <div class="item" style="--position: 10" data-index="9">
+        <img src="Pack.png" alt="Pack 10">
+        <div class="card-result"></div>
+      </div>
+    </div>
+
+    <!-- SIMPLE BUTTON BAR -->
+    <div class="controls-bar">
+      <button class="btn primary" id="openBtn">Open Pack</button>
+      <button class="btn" id="shuffleBtn">Shuffle</button>
+    </div>
+  </div>
+
+  <!-- REWARD POPUP -->
+  <div class="overlay" id="rewardOverlay">
+    <div class="reward-modal">
+      <div class="reward-card-image" id="rewardCardImage"></div>
+      <div class="reward-text">
+        <h2>Congratulations!</h2>
+        <p class="reward-subline">You hit something nice.</p>
+        <p id="rewardLabel"></p>
+        <div id="rewardBarcodeWrapper">
+          <svg id="rewardBarcode"></svg>
+          <div class="reward-barcode-label">Show this barcode at checkout</div>
+        </div>
+        <button class="reward-close" id="closeRewardBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AUDIO/MUSIC -->
+  <audio id="sfxClick" src="select.mp3" preload="auto"></audio>
+  <audio id="sfxSuspense" src="sus.mp3" preload="auto" loop></audio>
+  <audio id="sfxRip" src="rip.mp3" preload="auto"></audio>
+  <audio id="sfxReveal" src="win.mp3" preload="auto"></audio>
+  <audio id="sfxShuffle" src="spin.mp3" preload="auto"></audio>
+  <audio id="sfxJackpot" src="wow.mp3" preload="auto"></audio>
+
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <script>
+
+    // CAROUSEL
+
+    const slider = document.getElementById('slider');
+    const items = Array.from(slider.querySelectorAll('.item'));
+    const total = items.length;
+
+    let currentIndex = 0;
+    let isOpening = false;
+    let hasResult = false;
+
+    function updateCarousel() {
+      const step = 360 / total;
+      const angle = -currentIndex * step;
+      slider.style.setProperty('--rotateY', angle + 'deg');
+
+      items.forEach((item, idx) => {
+        item.classList.toggle('active', idx === currentIndex);
+      });
+    }
+
+    // EDIT DISCOUNTS
+
+    const discounts = [
+      {
+        id: 'disc-5',
+        label: '5% OFF your purchase',
+        weight: 50, // WEIGHT
+        image: 'a.png', // CARD IMAGE
+        storeCode: 'PACK-5OFF' // COUPON CODE
+      },
+      {
+        id: 'disc-10',
+        label: '10% OFF your purchase',
+        weight: 25, // WEIGHT
+        image: 'b.png', // CARD IMAGE
+        storeCode: 'PACK-10OFF' // COUPON CODE
+      },
+      {
+        id: 'disc-15',
+        label: '15% OFF your purchase',
+        weight: 15, // WEIGHT
+        image: 'c.png', // CARD IMAGE
+        storeCode: 'PACK-15OFF' // COUPON CODE
+      },
+      {
+        id: 'disc-20',
+        label: '20% OFF your purchase',
+        weight: 10, // WEIGHT
+        image: 'd.png', // CARD IMAGE
+        storeCode: 'PACK-20OFF' // COUPON CODE
+      },
+      {
+        id: 'disc-jackpot',
+        label: '25% OFF your purchase',
+        weight: 5, // WEIGHT
+        image: 'e.png', // CARD IMAGE
+        storeCode: 'PACK-25JACKPOT' // COUPON CODE
+      }
+    ];
+
+    function pickWeightedDiscount() {
+      const totalWeight = discounts.reduce((sum, d) => sum + d.weight, 0);
+      let r = Math.random() * totalWeight;
+      for (const d of discounts) {
+        if (r < d.weight) return d;
+        r -= d.weight;
+      }
+      return discounts[0];
+    }
+
+    // AUDIO HELPERS
+
+    const sfxClick = document.getElementById('sfxClick');
+    const sfxSuspense = document.getElementById('sfxSuspense');
+    const sfxRip = document.getElementById('sfxRip');
+    const sfxReveal = document.getElementById('sfxReveal');
+    const sfxShuffle = document.getElementById('sfxShuffle');
+    const sfxJackpot = document.getElementById('sfxJackpot');
+
+    function safePlay(audio) {
+      if (!audio) return;
+      audio.currentTime = 0;
+      audio.play().catch(() => { });
+    }
+
+    function safeStop(audio) {
+      if (!audio) return;
+      audio.pause();
+      audio.currentTime = 0;
+    }
+
+    // JACKPOT CONFETTI
+
+    function fireJackpotConfetti() {
+      if (typeof confetti !== 'function') return;
+
+      confetti({
+        particleCount: 120,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+
+      setTimeout(() => {
+        confetti({
+          particleCount: 80,
+          spread: 100,
+          origin: { y: 0.4 }
+        });
+      }, 250);
+    }
+
+    // REWARD POP-UP
+
+    const rewardOverlay = document.getElementById('rewardOverlay');
+    const rewardCardImage = document.getElementById('rewardCardImage');
+    const rewardPackLabel = document.getElementById('rewardPackLabel');
+    const closeRewardBtn = document.getElementById('closeRewardBtn');
+
+    function showRewardPopup(label, packName, image, storeCode) {
+      rewardLabel.textContent = label;
+
+      if (image) {
+        rewardCardImage.style.backgroundImage = `url('${image}')`;
+      } else {
+        rewardCardImage.style.backgroundImage = '';
+      }
+
+      const barcodeSvg = document.getElementById('rewardBarcode');
+      if (barcodeSvg && storeCode && typeof JsBarcode === 'function') {
+        JsBarcode(barcodeSvg, storeCode, {
+          format: "CODE128",
+          lineColor: "#1a1a1a",
+          width: 2,
+          height: 60,
+          displayValue: true,
+          fontSize: 14,
+          margin: 4
+        });
+      }
+
+      rewardOverlay.classList.add('show');
+    }
+
+    function hideRewardPopup() {
+      rewardOverlay.classList.remove('show');
+    }
+
+    rewardOverlay.addEventListener('click', (e) => {
+      if (e.target === rewardOverlay) {
+        resetCarouselAndShuffle();
+      }
+    });
+
+    closeRewardBtn.addEventListener('click', () => {
+      resetCarouselAndShuffle();
+    });
+
+    // BUTTONS
+
+    const shuffleBtn = document.getElementById('shuffleBtn');
+    const openBtn = document.getElementById('openBtn');
+
+    shuffleBtn.addEventListener('click', () => {
+      if (isOpening) return;
+      safePlay(sfxShuffle);
+      resetCarouselAndShuffle();
+    });
+
+    function resetCarouselAndShuffle() {
+      if (isOpening) return;
+
+      safeStop(sfxSuspense);
+      hideRewardPopup();
+      hasResult = false;
+
+      items.forEach(item => {
+        item.classList.remove('opening', 'show-card');
+        const card = item.querySelector('.card-result');
+        card.style.backgroundImage = '';
+      });
+
+      let newIndex = currentIndex;
+      while (newIndex === currentIndex && total > 1) {
+        newIndex = Math.floor(Math.random() * total);
+      }
+      currentIndex = newIndex;
+      updateCarousel();
+    };
+
+    openBtn.addEventListener('click', () => {
+      if (isOpening || hasResult) return;
+      isOpening = true;
+
+      const item = items[currentIndex];
+      const card = item.querySelector('.card-result');
+
+      items.forEach(i => i.classList.remove('opening', 'show-card'));
+
+      safePlay(sfxClick);
+      safePlay(sfxSuspense);
+
+      item.classList.add('opening');
+
+      const RIP_AFTER_MS = 1000;
+      const REVEAL_AFTER_MS = 1500;
+
+      setTimeout(() => {
+        safePlay(sfxRip);
+      }, RIP_AFTER_MS);
+
+      setTimeout(() => {
+        safeStop(sfxSuspense);
+
+        const reward = pickWeightedDiscount();
+
+        if (reward.image) {
+          card.style.backgroundImage = `url('${reward.image}')`;
+        } else {
+          card.style.backgroundImage = '';
+        }
+
+        item.classList.remove('opening');
+        item.classList.add('show-card');
+
+        if (reward.id === 'disc-jackpot') {
+          safePlay(sfxJackpot);
+        } else {
+          safePlay(sfxReveal);
+        }
+
+        const packName = item.querySelector('img').getAttribute('alt') || 'Mystery Pack';
+
+        setTimeout(() => {
+          if (reward.id === 'disc-jackpot') {
+            fireJackpotConfetti();
+          }
+          showRewardPopup(reward.label, packName, reward.image, reward.storeCode);
+        }, 1300);
+
+        isOpening = false;
+        hasResult = true;
+      }, REVEAL_AFTER_MS);
+    });
+
+    // INIT
+    updateCarousel();
+  </script>
+</body>
+
+</html>
